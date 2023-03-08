@@ -33,6 +33,10 @@ class UnloadLoadUI:
         load_new_button = Button(self.base_menu, text="Add Container", width=5, height=5, command=self.show_add_container_frame)
         load_new_button.grid(row=2, column=5, pady=30, sticky='new')
 
+        # Title the Element
+        title_label = Label(self.base_menu, text="Load/Unload", font=("Comic Sans", 16))
+        title_label.grid(row=0, column=1, sticky="nsew")
+
         # Create a label for the container list
         action_title = Label(self.base_menu, text="Actions Queued")
         action_title.grid(row=1, column=0, padx=10, pady=10, sticky="w")
