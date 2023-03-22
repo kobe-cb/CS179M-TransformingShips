@@ -2,20 +2,29 @@ import copy
 from queue import PriorityQueue
 
 # -1 means NAN, meaning the space does not exist in the ship
-
+# test_state = (
+#     ('*', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
+#     (-1, 'Cat', 'Dog', 'Pig', 'Hen', 'Rat', -1, -1, -1, -1, -1, -1)
+# )
 containers_to_unload = set()
 containers_to_unload.add("Hen")
 containers_to_unload.add("Pig")
 containers_to_load = set()
 containers_to_load.add('Nat')
 containers_to_load.add('Rat')
-
+f = open('load_unload_operations.txt', 'w')
 
 
 class Node:
     def __init__(self, ship, container_to_unload, container_to_load):
         self.ship = ship
-        self.path = []  # Changed to a list as it saves a LOT of time adding to a list than a single long string
         self.heuristic = 0  # h(n)
         self.depth = 0  # g(n), would represent the number of moves performed so far
         self.containers_to_unload = container_to_unload
@@ -30,6 +39,7 @@ class Node:
 
 # Driver FUNCTION
 def main():
+    # ship = test_state
     ship = get_ship()
     get_goal_state()
     search_ship(ship)
@@ -55,7 +65,6 @@ def search_ship(ship):
     repeated_states = set()
     max_queue_size = 0
     expanded_nodes = 0
-    curr_ship.path += [curr_ship.ship]
     working_queue.put(curr_ship)
     repeated_states.add(curr_ship.ship)
     max_queue_size += 1
@@ -71,7 +80,7 @@ def search_ship(ship):
         if curr_ship.depth != 0:
             curr_ship.time += curr_ship.heuristic
         if curr_ship.ship[0][0] == '*' and len(curr_ship.containers_to_unload) == 0:
-            curr_ship.time += 8
+            curr_ship.time += 4
         expanded_nodes += 1
         print('The best state to expand with a g(n) = ' + str(curr_ship.depth) + ' and h(n) = ' + str(
             curr_ship.heuristic) + ' is...')
@@ -118,7 +127,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
         if target not in ship.containers_to_unload:
             child = valid_position(child, target, ship.depth, False)
         else:
-            child = move_out(child, target, ship.depth)
+            child = move_out(child, target, ship.depth, ship.heuristic)
             if ship.depth % 2 != 0:
                 if len(ship.containers_to_unload) != 0:
                     ship.containers_to_unload.remove(target)
@@ -126,8 +135,6 @@ def move_tile(ship, repeated_states, working_queue, target, load):
     if child not in repeated_states:
         repeated_states.add(child)
         child_node = Node(child, ship.containers_to_unload, ship.containers_to_load)
-        child_node.path += ship.path
-        child_node.path += path
         child_node.depth = ship.depth + 1
         if target:
             if check != len(ship.containers_to_unload) and ship.depth % 2 != 0:
@@ -235,7 +242,7 @@ def container_above(ship, targetRow, targetCol):
     return ship.ship[targetRow][targetCol]
 
 
-def move_out(ship, target, depth):
+def move_out(ship, target, depth, heuristic):
     goalRow = 0
     goalColumn = 0
     for row in range(len(ship)):
@@ -247,7 +254,7 @@ def move_out(ship, target, depth):
     if depth % 2 == 0:
         # print("Crane picking up")
         print('Moving to the target crate')
-        path_calculations(ship, goalRow, goalColumn, depth, valid_position(ship, target, depth, True))
+        path_calculations(ship, goalRow, goalColumn, depth, heuristic, target)
         craneRow, craneCol = get_crane_pos(ship)
         ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
         ship[craneRow][craneCol] = 0
@@ -258,7 +265,7 @@ def move_out(ship, target, depth):
         ship[goalRow][goalColumn] = 0
         ship[craneRow][craneCol] = 0
         ship[0][0] = '*'
-        path_calculations(ship, goalRow, goalColumn, depth, valid_position(ship, target, depth, True))
+        path_calculations(ship, goalRow, goalColumn, depth, heuristic, target)
         return ship
 
 
@@ -277,7 +284,7 @@ def a_star_manhattan(ship, target, unload, depth, load):
                         print('Found the unloaded container')
                         return valid_position(ship, target, depth, True)
                     # print('Distance is ' + str(abs(row - 0) + abs(column - 0)))
-                    return abs(row - 0) + abs(column - 0) - 1
+                    return abs(row - 0) + abs(column - 0)
                 elif depth == 0:
                     # print('Distance is ' + str(abs(row - 0) + abs(column - 0) - 1))
                     return abs(row - 0) + abs(column - 0) - 1
@@ -296,7 +303,7 @@ def valid_position(ship, target, depth, distance):
             if ship[row][column] == target:
                 goalRow = row
                 goalColumn = column
-    # print('Current depth is ' + str(depth))
+    print('Current depth is ' + str(depth))
     if depth % 2 == 0:
         # print("Crane picking up")
         craneRow, craneCol = get_crane_pos(ship)
@@ -334,7 +341,7 @@ def valid_position(ship, target, depth, distance):
     for coordinates in valid_coordinates:
         shortest_distance.append((abs(goalRow - coordinates[0]) + abs(goalColumn - coordinates[1])))
     if distance:
-        # print('Shortest distance is: ' + str(min(shortest_distance)))
+        print('Shortest distance is: ' + str(min(shortest_distance)))
         return min(shortest_distance)
     valid_distance = min(shortest_distance)
     # path_calculations(ship, goalRow, goalColumn, depth, valid_distance)
@@ -351,16 +358,19 @@ def valid_position(ship, target, depth, distance):
     ship[validRow - 1][validColumn] = '*'
     ship[craneRow][craneCol] = 0
     print('Calculating path for moving the target somewhere else')
-    path_calculations(ship, goalRow, goalColumn, depth, valid_distance)
+    path_calculations(ship, goalRow, goalColumn, depth, valid_distance, target)
     return ship
 
 
-def path_calculations(ship, goalRow, goalColumn, depth, distance):
+def path_calculations(ship, goalRow, goalColumn, depth, distance, target):
     craneRow, craneCol = get_crane_pos(ship)
     path = []
-    path += [[craneRow + 1, craneCol]]
+    if ship[0][0] == '*':
+        path += [[9, 1]]
+    path += [[abs(craneRow - 8), craneCol + 1]]
     craneRow += 1
     # print(craneRow + 1, craneCol)
+    print(distance)
     if depth % 2 != 0:
         # if craneRow != 0 or craneCol != 0:
         #     path += [[craneRow + 1, craneCol]]
@@ -420,17 +430,24 @@ def path_calculations(ship, goalRow, goalColumn, depth, distance):
             validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
             craneRow, craneCol = validRow, validColumn
             if goalRow != craneRow or goalColumn != craneCol:
-                path += [[validRow, validColumn]]
+                path += [[abs(validRow - 9), validColumn + 1]]
             else:
-                path += [[validRow, validColumn]]
+                path += [[abs(validRow - 9), validColumn + 1]]
                 break
-    print('The valid path is: ' + str(path))
+        print('The valid path is: ' + str(path))
+        f.write('Move container ' + target + ' ' + str(path[len(path) - 1]) + ' to ' + str(path[0]))
+        if path[0] == [9, 1]:
+            f.write(' (off the ship)\n')
+        else:
+            f.write('\n')
+        f.write('Path: ' + (str(path)) + '\n')
 
 
-def load_path_calculations(ship, loadRow, loadColumn, depth, distance):
+def load_path_calculations(ship, loadRow, loadColumn, depth, distance, load):
     craneRow, craneCol = 0, 0
     repeats = []
     path = []
+    path += [[9, 1]]
     if depth % 2 == 0:
         for position in range(distance):
             valid_coordinates = []
@@ -438,6 +455,8 @@ def load_path_calculations(ship, loadRow, loadColumn, depth, distance):
             if craneRow == 0:
                 if ship[craneRow + 1][craneCol] == 0:
                     valid_coordinates.append([craneRow + 1, craneCol])
+                else:
+                    valid_coordinates.append([craneRow, craneCol + 1])
             elif craneRow != 0 and craneRow != 8:
                 if craneCol == 0:
                     if ship[craneRow][craneCol + 1] == 0:
@@ -462,12 +481,14 @@ def load_path_calculations(ship, loadRow, loadColumn, depth, distance):
             validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
             craneRow, craneCol = validRow, validColumn
             if loadRow != craneRow or loadColumn != craneCol:
-                path += [[validRow, validColumn]]
+                path += [[abs(validRow - 9), validColumn + 1]]
             else:
-                path += [[validRow, validColumn]]
+                path += [[abs(validRow - 9), validColumn + 1]]
                 break
-    path += [[loadRow, loadColumn]]
+    path += [[abs(loadRow - 9), loadColumn + 1]]
     print('The valid path is: ' + str(path))
+    f.write('Load container ' + load + ' to ' + str(path[len(path) - 1]) + '\n')
+    f.write('Path: ' + (str(path)) + '\n')
 
 
 def valid_load(ship, depth, load, distance):
@@ -502,7 +523,7 @@ def valid_load(ship, depth, load, distance):
     # print('Loading onto the ship')
     validRow = valid_coordinates[shortest_distance.index(min(shortest_distance))][0]
     validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
-    load_path_calculations(ship, validRow, validColumn, depth, valid_distance)
+    load_path_calculations(ship, validRow, validColumn, depth, valid_distance, load)
     ship[craneRow][craneCol] = 0
     ship[validRow - 1][validColumn] = '*'
     ship[validRow][validColumn] = load
