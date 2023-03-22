@@ -75,6 +75,7 @@ def search_ship(ship):
         if len(curr_ship.containers_to_unload) == 0 and len(curr_ship.containers_to_load) == 0 and curr_ship.ship[0][
             0] == '*':
             print("Ship loaded and unloaded! Total time to move containers is " + str(curr_ship.time) + " minutes.")
+            f.write('Final time for all moves is: ' + str(curr_ship.time) + ' minutes.' + '\n' + '\n')
             print_ship(curr_ship.ship)
             break
         if curr_ship.depth != 0:
@@ -113,6 +114,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
     # path += ['Unloading container ' + str(ship.ship[row][column])]
     child = convert_to_list(child)
     check = len(ship.containers_to_unload)
+    one_check = False
     if not target:
         if len(ship.containers_to_load) == 0:
             print('All containers are loaded!')
@@ -131,6 +133,8 @@ def move_tile(ship, repeated_states, working_queue, target, load):
             if ship.depth % 2 != 0:
                 if len(ship.containers_to_unload) != 0:
                     ship.containers_to_unload.remove(target)
+            if len(ship.containers_to_unload) == 0:
+                one_check = True
     child = convert_to_tuple(child)
     if child not in repeated_states:
         repeated_states.add(child)
@@ -144,7 +148,13 @@ def move_tile(ship, repeated_states, working_queue, target, load):
         child_node.heuristic = a_star_manhattan(child_node.ship, target,
                                                 child_node.containers_to_unload, child_node.depth, load)
         child_node.time = ship.time + child_node.time
-        print('Current time to move container into the ship is ' + str(child_node.time) + ' minutes')
+        print('Current time to move container into the ship is ' + str(child_node.time) + ' minutes.')
+        if ship.depth % 2 != 0 and len(ship.containers_to_unload) != 0:
+            f.write('Time for current move is: ' + str(child_node.time) + ' minutes.' + '\n' + '\n')
+        elif ship.depth % 2 != 0 and len(ship.containers_to_unload) == 0 and one_check:
+            f.write('Time for current move is: ' + str(child_node.time) + ' minutes.' + '\n' + '\n')
+        elif ship.depth % 2 == 0 and len(child_node.containers_to_unload) == 0:
+            f.write('Time for current move is: ' + str(child_node.time) + ' minutes.' + '\n' + '\n')
         working_queue.put(child_node)
 
 
@@ -284,7 +294,7 @@ def a_star_manhattan(ship, target, unload, depth, load):
                         print('Found the unloaded container')
                         return valid_position(ship, target, depth, True)
                     # print('Distance is ' + str(abs(row - 0) + abs(column - 0)))
-                    return abs(row - 0) + abs(column - 0)
+                    return abs(row - 0) + abs(column - 0) - 1
                 elif depth == 0:
                     # print('Distance is ' + str(abs(row - 0) + abs(column - 0) - 1))
                     return abs(row - 0) + abs(column - 0) - 1
