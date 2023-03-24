@@ -53,6 +53,7 @@ def main(actionsQueued, manifestFile, pathOnly):
     else:
         containers_to_unload, containers_to_load = get_goal_state(actionsQueued)
         search_ship(ship, containers_to_unload, containers_to_load)
+    f.close()
     return 0
 
 
