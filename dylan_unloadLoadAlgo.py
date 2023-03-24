@@ -4,27 +4,27 @@ from queue import PriorityQueue
 # -1 means NAN, meaning the space does not exist in the ship
 # test_state = (
 #     ('*', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 'Dog', -1, -1, -1, -1, -1, -1, -1, -1, -1),
 #     (-1, -1, 'Cat', -1, -1, -1, -1, -1, -1, -1, -1, -1)
 # )
 # test_state = (
 #     ('*', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, -1, 'Cat', -1, -1, -1, -1, -1, -1, -1, -1, -1)
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 # )
-actions = [('UNLOAD', 'Doe'), ('LOAD', 'Nat')]
+# actions = [('UNLOAD', 'Hen'), ('UNLOAD', 'Pig'), ('LOAD', 'Nat'), ('LOAD', 'Rat')]
 f = open('path.txt', 'w')
 
 
@@ -47,11 +47,15 @@ class Node:
 def main(actionsQueued, manifestFile, pathOnly):
     # ship = test_state
     ship = get_ship(manifestFile)
+    print_ship(ship)
     if pathOnly:
         print_ship(ship)
         balance_path(ship, actionsQueued)
     else:
-        containers_to_unload, containers_to_load = get_goal_state(actionsQueued)
+        containers_to_unload, containers_to_load = get_goal_state(actionsQueued, ship)
+        if not containers_to_unload and not containers_to_load:
+            print('Empty ship and nothing to load. Closing program!')
+            return 0
         search_ship(ship, containers_to_unload, containers_to_load)
     f.close()
     return 0
@@ -151,7 +155,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
         child_node.depth = ship.depth + 1
         if target:
             if check != len(ship.containers_to_unload) and ship.depth % 2 != 0:
-                print('Calculating moving crate to the ship itself')
+                # print('Calculating moving crate to the ship itself')
                 child_node.time += 4
         target = get_target(child_node)
         child_node.heuristic = a_star_manhattan(child_node.ship, target,
@@ -224,7 +228,7 @@ def get_ship(manifestName):
     return final_ship
 
 
-def get_goal_state(actionQueue):
+def get_goal_state(actionQueue, ship):
     # Calculate goal state by setting the unloaded containers to 0
     # actionQueue = [('UNLOAD', 'Pig'), ('LOAD', 'Tail', '123'), ('UNLOAD', 'Cat'), ('UNLOAD', 'Dog')]
     unloadItems = []
@@ -234,7 +238,14 @@ def get_goal_state(actionQueue):
             unloadItems.append(item[1])
         elif item[0] == 'LOAD':
             loadItems.append(item[1])
-    return unloadItems, loadItems
+    curr_ship = Node(ship, unloadItems, loadItems)
+    target = get_target(curr_ship)
+    if target == 0 and len(unloadItems) != 0 and len(loadItems) == 0:
+        return False, False
+    elif target == 0 and len(loadItems) != 0:
+        return [], loadItems
+    else:
+        return unloadItems, loadItems
 
 
 def get_target(ship):
@@ -244,7 +255,8 @@ def get_target(ship):
         for column in range(len(ship.ship)):
             if ship.ship[row][column] in ship.containers_to_unload:
                 target = container_above(ship, row, column)
-                # print("Target is " + str(target))
+                print("Target is " + str(target))
+                print(row, column)
                 return target
     return target
 
@@ -272,23 +284,26 @@ def container_above(ship, targetRow, targetCol):
 def move_out(ship, target, depth, heuristic):
     goalRow = 0
     goalColumn = 0
+    found = False
     for row in range(len(ship)):
         for column in range(len(ship)):
-            if ship[row][column] == target:
+            if ship[row][column] == target and not found:
                 goalRow = row
                 goalColumn = column
+                found = True
                 break
     # print('Current depth is ' + str(depth))
+
     if depth % 2 == 0:
         # print("Crane picking up")
-        print('Moving to the target crate')
+        # print('Moving to the target crate')
         craneRow, craneCol = get_crane_pos(ship)
         ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
         ship[craneRow][craneCol] = 0
         return ship
     else:
-        print('Moving out of the target crate')
-        f.write('Move container ' + str(ship[goalRow][goalColumn]) + ' to ' + str([9, 1]) + ' (off the ship)' + '\n')
+        # print('Moving out of the target crate')
+        f.write('Move container ' + str(ship[goalRow][goalColumn]) + ' ' + str([abs(goalRow - 9), goalColumn + 1]) + ' to ' + str([9, 1]) + ' (off the ship)' + '\n')
         craneRow, craneCol = get_crane_pos(ship)
         ship[goalRow][goalColumn] = 0
         ship[craneRow][craneCol] = 0
@@ -323,13 +338,15 @@ def balance_path(ship, path_file):
         validCol = abs(ship_position1[pos][1] - 1)
         goalRow = abs(ship_position2[pos][0] - 9)
         goalColumn = abs(ship_position2[pos][1] - 1)
-        f.write('Move container ' + str(ship[validRow][validCol]) + ' ' + str(ship_position1[pos]) + ' to ' + str(ship_position2[pos]) + '\n' + '\n')
+        f.write('Move container ' + str(ship[validRow][validCol]) + ' ' + str(ship_position1[pos]) + ' to ' + str(
+            ship_position2[pos]) + '\n' + '\n')
         ship = convert_to_list(ship)
         temp = ship[goalRow][goalColumn]
         ship[goalRow][goalColumn] = ship[validRow][validCol]
         ship[validRow][validCol] = temp
         ship = convert_to_tuple(ship)
     f.write('Final time for all moves is: ' + str(time))
+
 
 # HEURISTIC FUNCTIONS
 
@@ -416,7 +433,8 @@ def valid_position(ship, target, depth, distance):
     ship[validRow][validColumn] = temp
     ship[validRow - 1][validColumn] = '*'
     ship[craneRow][craneCol] = 0
-    f.write('Move container ' + str(ship[validRow][validColumn]) + ' to ' + str([abs(validRow - 9), validColumn + 1]) + '\n')
+    f.write('Move container ' + str(ship[validRow][validColumn]) + ' ' + str([abs(validRow - 9), validColumn + 1]) +  ' to ' + str(
+        [abs(validRow - 9), validColumn + 1]) + '\n')
     return ship
 
 
@@ -450,6 +468,8 @@ def valid_load(ship, depth, load, distance):
     for coordinates in valid_coordinates:
         shortest_distance.append((abs(craneRow - coordinates[0]) + abs(craneCol - coordinates[1])))
     if distance:
+        if len(shortest_distance) == 0:
+            return 0
         return min(shortest_distance) - 1
     validRow = valid_coordinates[shortest_distance.index(min(shortest_distance))][0]
     validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
@@ -461,4 +481,4 @@ def valid_load(ship, depth, load, distance):
     return ship
 
 
-# main(actions, 'ShipCase3.txt', True)
+# main(actions, 'ShipCase5.txt', False)
