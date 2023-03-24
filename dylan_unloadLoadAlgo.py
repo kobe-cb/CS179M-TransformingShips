@@ -4,22 +4,28 @@ from queue import PriorityQueue
 # -1 means NAN, meaning the space does not exist in the ship
 # test_state = (
 #     ('*', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
-#     (-1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -1),
-#     (-1, 'Cat', 'Dog', 'Pig', 'Hen', 'Rat', -1, -1, -1, -1, -1, -1)
+#     (-1, -1, 0, 0, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1),
+#     (-1, -1, 'Cat', -1, -1, -1, -1, -1, -1, -1, -1, -1)
 # )
-containers_to_unload = set()
-containers_to_unload.add("Hen")
-containers_to_unload.add("Pig")
-containers_to_load = set()
-containers_to_load.add('Nat')
-containers_to_load.add('Rat')
-f = open('load_unload_operations.txt', 'w')
+# test_state = (
+#     ('*', 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
+#     (-1, -1, 'Cat', -1, -1, -1, -1, -1, -1, -1, -1, -1)
+# )
+# actions = [('UNLOAD', 'Cow'), ('LOAD', 'Bat', '123'), ('LOAD', 'Rat', '123')]
+f = open('path.txt', 'w')
 
 
 class Node:
@@ -38,16 +44,20 @@ class Node:
 
 
 # Driver FUNCTION
-def main():
+def main(actionsQueued, manifestFile, pathOnly):
     # ship = test_state
-    ship = get_ship()
-    get_goal_state()
-    search_ship(ship)
+    ship = get_ship(manifestFile)
+    if pathOnly:
+        print_ship(ship)
+        balance_path_calculations(ship, actionsQueued)
+    else:
+        containers_to_unload, containers_to_load = get_goal_state(actionsQueued)
+        search_ship(ship, containers_to_unload, containers_to_load)
     return 0
 
 
-def search_ship(ship):
-    curr_ship = Node(ship, containers_to_unload, containers_to_load)
+def search_ship(ship, unloaded, loaded):
+    curr_ship = Node(ship, unloaded, loaded)
     if len(curr_ship.containers_to_unload) == 0:
         if len(curr_ship.containers_to_load) != 0:
             load = list(curr_ship.containers_to_load).pop()
@@ -98,7 +108,7 @@ def node_expansion(ship, target, repeated_states, working_queue):
         load = False
     else:
         load = list(ship.containers_to_load).pop()
-    if len(containers_to_unload) == 0:
+    if len(ship.containers_to_unload) == 0:
         target = False
     else:
         load = False
@@ -185,10 +195,10 @@ def print_ship(ship):
     print()
 
 
-def get_ship():
+def get_ship(manifestName):
     ship_coordinates = []
     ship_containers = []
-    with open("ShipCase5.txt", "r") as file:
+    with open(manifestName, "r") as file:
         for line in file:
             parts = line.strip().split(",")
             coords = [0, 0]
@@ -215,9 +225,17 @@ def get_ship():
     return final_ship
 
 
-def get_goal_state():
+def get_goal_state(actionQueue):
     # Calculate goal state by setting the unloaded containers to 0
-    return 0
+    # actionQueue = [('UNLOAD', 'Pig'), ('LOAD', 'Tail', '123'), ('UNLOAD', 'Cat'), ('UNLOAD', 'Dog')]
+    unloadItems = []
+    loadItems = []
+    for item in actionQueue:
+        if item[0] == 'UNLOAD':
+            unloadItems.append(item[1])
+        elif item[0] == 'LOAD':
+            loadItems.append(item[1])
+    return unloadItems, loadItems
 
 
 def get_target(ship):
@@ -260,6 +278,7 @@ def move_out(ship, target, depth, heuristic):
             if ship[row][column] == target:
                 goalRow = row
                 goalColumn = column
+                break
     # print('Current depth is ' + str(depth))
     if depth % 2 == 0:
         # print("Crane picking up")
@@ -279,119 +298,33 @@ def move_out(ship, target, depth, heuristic):
         return ship
 
 
-# HEURISTIC FUNCTIONS
-
-
-def a_star_manhattan(ship, target, unload, depth, load):
-    # print(target)
-    if not target:
-        return valid_load(ship, depth, load, True)
-    for row in range(len(ship)):
-        for column in range(len(ship)):
-            if ship[row][column] == target:
-                if target in unload:
-                    if depth != 0 and depth % 2 == 0:
-                        print('Found the unloaded container')
-                        return valid_position(ship, target, depth, True)
-                    # print('Distance is ' + str(abs(row - 0) + abs(column - 0)))
-                    return abs(row - 0) + abs(column - 0) - 1
-                elif depth == 0:
-                    # print('Distance is ' + str(abs(row - 0) + abs(column - 0) - 1))
-                    return abs(row - 0) + abs(column - 0) - 1
-                else:
-                    # print('Not the unloaded container')
-                    return valid_position(ship, target, depth, True)
-
-
-def valid_position(ship, target, depth, distance):
-    goalRow = 0
-    goalColumn = 0
-    valid_coordinates = []
-    shortest_distance = []
-    for row in range(len(ship)):
-        for column in range(len(ship)):
-            if ship[row][column] == target:
-                goalRow = row
-                goalColumn = column
-    print('Current depth is ' + str(depth))
-    if depth % 2 == 0:
-        # print("Crane picking up")
-        craneRow, craneCol = get_crane_pos(ship)
-        # print(craneRow)
-        # print(craneCol)
-        if distance:
-            # print('Distance is ' + str(abs((goalRow - 1) - craneRow) + abs(goalColumn - craneCol)))
-            return abs((goalRow - 1) - craneRow) + abs(goalColumn - craneCol)
-        if goalRow == 1 and goalColumn == 0:
-            ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
-            ship[craneRow][craneCol] = '**'
-            return ship
-        else:
-            ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
-            ship[craneRow][craneCol] = 0
-            return ship
-    else:
-        # print("Crane moving column")
-        for row in range(len(ship)):
-            for column in range(len(ship)):
-                if ship[row][column] == 0:
-                    if row != 0:
-                        if row < 7:
-                            if ship[row + 1][column] != 0 and ship[row + 1][column] != target and ship[row + 1][
-                                column] != \
-                                    ship[row + 1][goalColumn]:
-                                valid_coordinates.append([row, column])
-                            if ship[row + 1][column] == - 1:
-                                valid_coordinates.append([row, column])
-                        elif row == 7:
-                            if ship[row + 1][column] == 0 and ship[row + 1][column] != ship[row + 1][goalColumn]:
-                                valid_coordinates.append([row + 1, column])
-                            if ship[row + 1][column] == - 1:
-                                valid_coordinates.append([row, column])
-    for coordinates in valid_coordinates:
-        shortest_distance.append((abs(goalRow - coordinates[0]) + abs(goalColumn - coordinates[1])))
-    if distance:
-        print('Shortest distance is: ' + str(min(shortest_distance)))
-        return min(shortest_distance)
-    valid_distance = min(shortest_distance)
-    # path_calculations(ship, goalRow, goalColumn, depth, valid_distance)
-    validRow = valid_coordinates[shortest_distance.index(min(shortest_distance))][0]
-    validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
-    # print(validRow, validColumn)
-    # print(goalRow, goalColumn)
-    # print('Shortest distance is: ')
-    # print(min(shortest_distance))
-    craneRow, craneCol = get_crane_pos(ship)
-    temp = ship[goalRow][goalColumn]
-    ship[goalRow][goalColumn] = ship[validRow][validColumn]
-    ship[validRow][validColumn] = temp
-    ship[validRow - 1][validColumn] = '*'
-    ship[craneRow][craneCol] = 0
-    print('Calculating path for moving the target somewhere else')
-    path_calculations(ship, goalRow, goalColumn, depth, valid_distance, target)
-    return ship
-
-
 def path_calculations(ship, goalRow, goalColumn, depth, distance, target):
     craneRow, craneCol = get_crane_pos(ship)
     path = []
     if ship[0][0] == '*':
         path += [[9, 1]]
-    path += [[abs(craneRow - 8), craneCol + 1]]
-    craneRow += 1
-    # print(craneRow + 1, craneCol)
-    print(distance)
     if depth % 2 != 0:
-        # if craneRow != 0 or craneCol != 0:
-        #     path += [[craneRow + 1, craneCol]]
-        #     path += [[craneRow, craneCol]]
-        for position in range(distance):
+        for position in range(distance + 1):
             valid_coordinates = []
             shortest_distance = []
             if craneRow == 0:
                 if craneCol == 0:
                     if ship[craneRow + 1][craneCol] == 0:
                         valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                if craneCol == 11:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+                else:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                    elif ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
             elif craneRow == 8:
                 if craneCol == 0:
                     if ship[craneRow - 1][craneCol] == 0:
@@ -409,7 +342,7 @@ def path_calculations(ship, goalRow, goalColumn, depth, distance, target):
                     if ship[craneRow][craneCol + 1] == 0:
                         valid_coordinates.append([craneRow, craneCol + 1])
                     if ship[craneRow][craneCol - 1] == 0:
-                        valid_coordinates.append([craneRow + 1, craneCol - 1])
+                        valid_coordinates.append([craneRow, craneCol - 1])
             elif craneRow != 0:
                 if craneCol == 0:
                     if ship[craneRow + 1][craneCol] == 0:
@@ -455,7 +388,6 @@ def path_calculations(ship, goalRow, goalColumn, depth, distance, target):
 
 def load_path_calculations(ship, loadRow, loadColumn, depth, distance, load):
     craneRow, craneCol = 0, 0
-    repeats = []
     path = []
     path += [[9, 1]]
     if depth % 2 == 0:
@@ -501,6 +433,231 @@ def load_path_calculations(ship, loadRow, loadColumn, depth, distance, load):
     f.write('Path: ' + (str(path)) + '\n')
 
 
+def balance_path_calculations(ship, path_file):
+    ship_position1 = []
+    ship_position2 = []
+    with open('instructions.txt', "r") as file:
+        for line in file:
+            coords = [0, 0]
+            coords2 = [0, 0]
+            parts = line.strip().split(" to ")
+            parts[0] = parts[0].strip('Move ')
+            coords_stored = parts[0].strip('()').split(',')
+            coords = [int(coords_stored[0]), int(coords_stored[1])]
+            print(coords)
+            coords_stored = parts[1].strip('()').split(',')
+            coords2 = [int(coords_stored[0]), int(coords_stored[1])]
+            print(coords2)
+            ship_position1.append(coords)
+            ship_position2.append(coords2)
+    # print(ship_coordinates)
+    print(ship_position1)
+    print(ship_position2)
+    found = False
+    while len(ship_position1) != 0:
+        position1 = ship_position1[0]
+        position2 = ship_position2[0]
+        target = ship[abs(position1[0] - 9)][position1[1] - 1]
+        craneRow, craneCol = abs(position1[0] - 9), position1[1] - 1
+        goalRow, goalColumn = abs(position2[0] - 9), position2[1] - 1
+        path = []
+        path += [[position1[0], position1[1]]]
+        while not found:
+            valid_coordinates = []
+            shortest_distance = []
+            if craneRow == position2[0] and craneCol == position2[1]:
+                path += [[abs(craneRow - 9), craneCol + 1]]
+                found = True
+                break
+            if craneRow == 0:
+                if craneCol == 0:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                if craneCol == 11:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+                else:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    elif ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                    elif ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+            elif craneRow == 8:
+                if craneCol == 0:
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                if craneCol == 11:
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+                else:
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                    if ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+            elif craneRow != 0:
+                if craneCol == 0:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                if craneCol == 11:
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+                else:
+
+                    if ship[craneRow + 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow + 1, craneCol])
+                    if ship[craneRow - 1][craneCol] == 0:
+                        valid_coordinates.append([craneRow - 1, craneCol])
+                    if ship[craneRow][craneCol + 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol + 1])
+                    if ship[craneRow][craneCol - 1] == 0:
+                        valid_coordinates.append([craneRow, craneCol - 1])
+            for coordinates in valid_coordinates:
+                shortest_distance.append((abs(goalRow - coordinates[0]) + abs(goalColumn - coordinates[1])))
+            validRow = valid_coordinates[shortest_distance.index(min(shortest_distance))][0]
+            validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
+            craneRow, craneCol = validRow, validColumn
+            if goalRow != craneRow or goalColumn != craneCol:
+                path += [[abs(validRow - 9), validColumn + 1]]
+            else:
+                path += [[abs(validRow - 9), validColumn + 1]]
+                break
+        print('The valid path is: ' + str(path))
+        ship = convert_to_list(ship)
+        tempRow, tempCol = abs(path[0][0] - 9), path[0][1] - 1
+        swapRow, swapCol = abs(path[len(path) - 1][0] - 9), path[len(path) - 1][1] - 1
+        # print(tempRow, tempCol)
+        # print(swapRow, swapCol)
+        # print(ship[tempRow][tempCol])
+        # print(ship[swapRow][swapCol])
+        temp = ship[tempRow][tempCol]
+        ship[tempRow][tempCol] = ship[swapRow][swapCol]
+        ship[swapRow][swapCol] = temp
+        ship = convert_to_tuple(ship)
+        print_ship(ship)
+        f.write('Move container ' + str(target) + ' ' + str(path[0]) + ' to ' + str(path[len(path) - 1]))
+        if path[0] == [9, 1]:
+            f.write(' (off the ship)\n')
+        else:
+            f.write('\n')
+        f.write('Path: ' + (str(path)) + '\n')
+        ship_position1.remove(ship_position1[0])
+        ship_position2.remove(ship_position2[0])
+
+
+# HEURISTIC FUNCTIONS
+
+
+def a_star_manhattan(ship, target, unload, depth, load):
+    # print(target)
+    if not target:
+        return valid_load(ship, depth, load, True)
+    for row in range(len(ship)):
+        for column in range(len(ship)):
+            if ship[row][column] == target:
+                if target in unload:
+                    if depth != 0 and depth % 2 == 0:
+                        print('Found the unloaded container')
+                        return valid_position(ship, target, depth, True)
+                    # print('Distance is ' + str(abs(row - 0) + abs(column - 0)))
+                    return abs(row - 0) + abs(column - 0) - 1
+                elif depth == 0:
+                    # print('Distance is ' + str(abs(row - 0) + abs(column - 0) - 1))
+                    return abs(row - 0) + abs(column - 0) - 1
+                else:
+                    # print('Not the unloaded container')
+                    return valid_position(ship, target, depth, True)
+
+
+def valid_position(ship, target, depth, distance):
+    goalRow = 0
+    goalColumn = 0
+    valid_coordinates = []
+    shortest_distance = []
+    for row in range(len(ship)):
+        for column in range(len(ship)):
+            if ship[row][column] == target:
+                goalRow = row
+                goalColumn = column
+    # print('Current depth is ' + str(depth))
+    if depth % 2 == 0:
+        # print("Crane picking up")
+        craneRow, craneCol = get_crane_pos(ship)
+        # print(craneRow)
+        # print(craneCol)
+        if distance:
+            # print('Distance is ' + str(abs((goalRow - 1) - craneRow) + abs(goalColumn - craneCol)))
+            return abs((goalRow - 1) - craneRow) + abs(goalColumn - craneCol)
+        if goalRow == 1 and goalColumn == 0:
+            ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
+            ship[craneRow][craneCol] = '**'
+            return ship
+        else:
+            ship[goalRow - 1][goalColumn] = ship[craneRow][craneCol]
+            ship[craneRow][craneCol] = 0
+            return ship
+    else:
+        # print("Crane moving column")
+        for row in range(len(ship)):
+            for column in range(len(ship)):
+                if ship[row][column] == 0:
+                    if row != 0:
+                        if row < 7:
+                            if ship[row + 1][column] != 0 and ship[row + 1][column] != target and ship[row + 1][
+                                column] != \
+                                    ship[row + 1][goalColumn]:
+                                valid_coordinates.append([row, column])
+                            if ship[row + 1][column] == - 1:
+                                valid_coordinates.append([row, column])
+                        elif row == 7:
+                            if ship[row + 1][column] != 0 and ship[row + 1][column] != ship[row + 1][goalColumn]:
+                                valid_coordinates.append([row, column])
+                            if ship[row + 1][column] == 0 and ship[row + 1][column] != ship[row + 1][goalColumn]:
+                                valid_coordinates.append([row + 1, column])
+                            if ship[row + 1][column] == - 1:
+                                valid_coordinates.append([row, column])
+    for coordinates in valid_coordinates:
+        shortest_distance.append((abs(goalRow - coordinates[0]) + abs(goalColumn - coordinates[1])))
+    if distance:
+        # print('Shortest distance is: ' + str(min(shortest_distance)))
+        return min(shortest_distance)
+    valid_distance = min(shortest_distance)
+    # path_calculations(ship, goalRow, goalColumn, depth, valid_distance)
+    validRow = valid_coordinates[shortest_distance.index(min(shortest_distance))][0]
+    validColumn = valid_coordinates[shortest_distance.index(min(shortest_distance))][1]
+    # print(validRow, validColumn)
+    # print(goalRow, goalColumn)
+    # print('Shortest distance is: ')
+    # print(min(shortest_distance))
+    craneRow, craneCol = get_crane_pos(ship)
+    temp = ship[goalRow][goalColumn]
+    ship[goalRow][goalColumn] = ship[validRow][validColumn]
+    ship[validRow][validColumn] = temp
+    ship[validRow - 1][validColumn] = '*'
+    ship[craneRow][craneCol] = 0
+    print('Calculating path for moving the target somewhere else')
+    path_calculations(ship, goalRow, goalColumn, depth, valid_distance, target)
+    return ship
+
+
 def valid_load(ship, depth, load, distance):
     valid_coordinates = []
     shortest_distance = []
@@ -508,7 +665,7 @@ def valid_load(ship, depth, load, distance):
     invalidColumn = 20
     if depth % 2 != 0:
         if distance:
-            return abs(craneRow - 0) + abs(craneCol - 0)
+            return abs(craneRow - 0) + abs(craneCol - 0) - 1
         ship[0][0] = '*'
         ship[craneRow][craneCol] = 0
         return ship
@@ -517,13 +674,17 @@ def valid_load(ship, depth, load, distance):
         for column in range(len(ship)):
             if row == 1:
                 if ship[row][column] != 0 and ship[row][column] != '*' and row != 0 and ship[row][column] != '**':
-                    # print('Row is completely full, no valid coordinates will be in this row.')
                     invalidColumn = column
             else:
                 if ship[row][column] != 0 and ship[row][column] != '*' and row != 0 and ship[row][
                     column] != '**' and column != invalidColumn and ship[row - 1][column] == 0:
                     valid_coordinates.append([row - 1, column])
-    # print(valid_coordinates)
+                elif ship[row][column] == -1:
+                    if ship[row - 1][column] == 0 and row != 1:
+                        valid_coordinates.append([row - 1, column])
+                elif row == 8:
+                    if ship[row][column] == 0:
+                        valid_coordinates.append([row, column])
     for coordinates in valid_coordinates:
         shortest_distance.append((abs(craneRow - coordinates[0]) + abs(craneCol - coordinates[1])))
     if distance:
@@ -540,4 +701,4 @@ def valid_load(ship, depth, load, distance):
     return ship
 
 
-main()
+# main(actions, 'ShipCase3.txt', False)
