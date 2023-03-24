@@ -128,6 +128,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
     child = convert_to_list(child)
     check = len(ship.containers_to_unload)
     one_check = False
+    # Distinguish between loading a container and unloading
     if not target:
         if len(ship.containers_to_load) == 0:
             print('All containers are loaded!')
@@ -146,6 +147,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
             if ship.depth % 2 != 0:
                 if len(ship.containers_to_unload) != 0:
                     ship.containers_to_unload.remove(target)
+            # Edge case to mark in the file an unload after the last container got unloaded
             if len(ship.containers_to_unload) == 0:
                 one_check = True
     child = convert_to_tuple(child)
@@ -153,6 +155,7 @@ def move_tile(ship, repeated_states, working_queue, target, load):
         repeated_states.add(child)
         child_node = Node(child, ship.containers_to_unload, ship.containers_to_load)
         child_node.depth = ship.depth + 1
+        # Depth checks done to mark moves for when the container itself is moved to a location rather than the crane
         if target:
             if check != len(ship.containers_to_unload) and ship.depth % 2 != 0:
                 # print('Calculating moving crate to the ship itself')
@@ -190,6 +193,7 @@ def convert_to_tuple(ship):  # Convert back to a tuple
 
 
 def print_ship(ship):
+    # Easier to see the ship state when swapping the ship items
     for row in ship:
         row_str = ""
         for element in row:
@@ -199,6 +203,7 @@ def print_ship(ship):
 
 
 def get_ship(manifestName):
+    # Interprets the manifest file and converts it to a usable embedded tuple for use
     ship_coordinates = []
     ship_containers = []
     with open(manifestName, "r") as file:
@@ -229,7 +234,7 @@ def get_ship(manifestName):
 
 
 def get_goal_state(actionQueue, ship):
-    # Calculate goal state by setting the unloaded containers to 0
+    # Calculate goal state by adding the action queue from the UI to the code itself
     # actionQueue = [('UNLOAD', 'Pig'), ('LOAD', 'Tail', '123'), ('UNLOAD', 'Cat'), ('UNLOAD', 'Dog')]
     unloadItems = []
     loadItems = []
@@ -262,6 +267,7 @@ def get_target(ship):
 
 
 def get_crane_pos(ship):
+    # Get the position of the crane
     for row in range(len(ship)):
         for column in range(len(ship)):
             if ship[row][column] == '*' or ship[row][column] == '**':
@@ -269,6 +275,7 @@ def get_crane_pos(ship):
 
 
 def container_above(ship, targetRow, targetCol):
+    # Check for containers above so that the target is the one with the shortest Manhattan Distance
     valid = False
     if ship.ship[targetRow - 1][targetCol] == 0:
         return ship.ship[targetRow][targetCol]
@@ -302,8 +309,10 @@ def move_out(ship, target, depth, heuristic):
         ship[craneRow][craneCol] = 0
         return ship
     else:
+        # Moving the container off the ship
         # print('Moving out of the target crate')
-        f.write('Move container ' + str(ship[goalRow][goalColumn]) + ' ' + str([abs(goalRow - 9), goalColumn + 1]) + ' to ' + str([9, 1]) + ' (off the ship)' + '\n')
+        f.write('Move container ' + str(ship[goalRow][goalColumn]) + ' ' + str(
+            [abs(goalRow - 9), goalColumn + 1]) + ' to ' + str([9, 1]) + ' (off the ship)' + '\n')
         craneRow, craneCol = get_crane_pos(ship)
         ship[goalRow][goalColumn] = 0
         ship[craneRow][craneCol] = 0
@@ -312,6 +321,7 @@ def move_out(ship, target, depth, heuristic):
 
 
 def balance_path(ship, path_file):
+    # Calculate a readable path file for the balance algorithm
     ship_position1 = []
     ship_position2 = []
     count = 0
@@ -352,6 +362,7 @@ def balance_path(ship, path_file):
 
 
 def a_star_manhattan(ship, target, unload, depth, load):
+    # Calculate Manhattan Distance based on whether a crane is loading/unloading or moving/picking up a container
     # print(target)
     if not target:
         return valid_load(ship, depth, load, True)
@@ -373,6 +384,7 @@ def a_star_manhattan(ship, target, unload, depth, load):
 
 
 def valid_position(ship, target, depth, distance):
+    # Calculates a proper distance between two coordinates and swaps items to reposition containers after being moved
     goalRow = 0
     goalColumn = 0
     valid_coordinates = []
@@ -433,12 +445,14 @@ def valid_position(ship, target, depth, distance):
     ship[validRow][validColumn] = temp
     ship[validRow - 1][validColumn] = '*'
     ship[craneRow][craneCol] = 0
-    f.write('Move container ' + str(ship[validRow][validColumn]) + ' ' + str([abs(validRow - 9), validColumn + 1]) +  ' to ' + str(
+    f.write('Move container ' + str(ship[validRow][validColumn]) + ' ' + str(
+        [abs(validRow - 9), validColumn + 1]) + ' to ' + str(
         [abs(validRow - 9), validColumn + 1]) + '\n')
     return ship
 
 
 def valid_load(ship, depth, load, distance):
+    # Calculates a proper distance between two coordinates and swaps items to reposition containers after being moved for load
     valid_coordinates = []
     shortest_distance = []
     craneRow, craneCol = get_crane_pos(ship)
@@ -480,5 +494,16 @@ def valid_load(ship, depth, load, distance):
         [abs(validRow - 9), validColumn + 1]) + '\n')
     return ship
 
-
 # main(actions, 'ShipCase5.txt', False)
+
+
+# MAJORTIY OF THIS ALGORITHM WAS BASED ON THE 8-PUZZLE A* SEARCH FROM CS170: ALL SOURCES BELOW
+# Helped with the implementation of a depth for picking up the container, and actually moving the container: https://www.dropbox.com/s/k0eo95kixkyln2p/Thoughts%20on%20N-column%20Container%20Search.pptx?dl=0
+# https://raspberrypi.stackexchange.com/questions/15613/stop-program-after-a-period-of-time, Done in case a search depth takes way too long to finish
+# Using priority queue for the node frontier: https://docs.python.org/3/library/queue.html
+# HEAVILY inspired from psuedocode in: https://www.dropbox.com/sh/cp90q8nlk8od4cw/AADK4L3qOh-OJtFzdi_8Moaka?dl=0&preview=Project_1_The_Eight_Puzzle_CS_170_2022.pdf
+# INSPIRED BY https://plainenglish.io/blog/uniform-cost-search-ucs-algorithm-in-python-ec3ee03fca9f
+# Implemented so the priorityqueue can compare objects and automatically preceed with the node with the lowest cost
+# https://stackoverflow.com/questions/9292415/i-notice-i-cannot-use-priorityqueue-for-objects
+# https://cdn.codespeedy.com/wp-content/uploads/2020/03/manhattan.jpg
+# Based off this: https://ai.stackexchange.com/questions/7555/how-do-i-keep-track-of-already-visited-states-in-breadth-first-search
