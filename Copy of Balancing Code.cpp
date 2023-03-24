@@ -420,6 +420,11 @@ void makeBalanced(Node* shipGrid, bool Sifting)
             while(shipGrid->CurrentGrid[NodeYPosition][NodeXPosition]->weight == -1 && NodeYPosition > -1)//if there is negative ones
             {
                 NodeYPosition--;
+                if (shipGrid->CurrentGrid[0][NodeXPosition]->weight == -1)
+                {
+                    NodeYPosition = -1;
+                    break;
+                }
             }
 
             if (NodeYPosition > -1)
@@ -596,9 +601,13 @@ int main()
         }
     }
 
-    if (checksize < 2)
+    if (checksize == 1)
     {
         performSift = true;
+    }
+    else if(checksize == 0)
+    {
+        performSift = false;
     }
 
     if (performSift == false)
