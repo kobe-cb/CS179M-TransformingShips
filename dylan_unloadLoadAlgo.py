@@ -24,7 +24,7 @@ from queue import PriorityQueue
 #     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 #     (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0),
 # )
-# actions = [('UNLOAD', 'Hen'), ('UNLOAD', 'Pig'), ('LOAD', 'Nat'), ('LOAD', 'Rat')]
+actions = [('UNLOAD', 'Ewe')]
 f = open('path.txt', 'w')
 
 
@@ -447,7 +447,7 @@ def valid_position(ship, target, depth, distance):
     ship[craneRow][craneCol] = 0
     f.write('Move container ' + str(ship[validRow][validColumn]) + ' ' + str(
         [abs(validRow - 9), validColumn + 1]) + ' to ' + str(
-        [abs(validRow - 9), validColumn + 1]) + '\n')
+        [abs(goalRow - 9), goalColumn + 1]) + '\n')
     return ship
 
 
@@ -494,7 +494,7 @@ def valid_load(ship, depth, load, distance):
         [abs(validRow - 9), validColumn + 1]) + '\n')
     return ship
 
-# main(actions, 'ShipCase5.txt', False)
+main(actions, 'ShipCase4.txt', False)
 
 
 # MAJORTIY OF THIS ALGORITHM WAS BASED ON THE 8-PUZZLE A* SEARCH FROM CS170: ALL SOURCES BELOW
